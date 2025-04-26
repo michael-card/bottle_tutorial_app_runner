@@ -1,20 +1,28 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib';
-import { BottleTutorialAppRunnerStack } from '../lib/bottle_tutorial_app_runner-stack';
+import { BottleTutorialEcsStack } from '../lib/bottle-tutorial-ecs-stack';
+import { BottleTutorialAppRunnerStack } from '../lib/bottle-tutorial-app-runner-stack';
+
+const repositoryName = 'bottle-tutorial-repo';
+const imageName = 'bottle-tutorial-image';
+const serviceName = 'bottle-tutorial-app-runner-service';
 
 const app = new cdk.App();
-new BottleTutorialAppRunnerStack(app, 'BottleTutorialAppRunnerStack', {
-  /* If you don't specify 'env', this stack will be environment-agnostic.
-   * Account/Region-dependent features and context lookups will not work,
-   * but a single synthesized template can be deployed anywhere. */
 
-  /* Uncomment the next line to specialize this stack for the AWS Account
-   * and Region that are implied by the current CLI configuration. */
-  // env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEFAULT_REGION },
-
-  /* Uncomment the next line if you know exactly what Account and Region you
-   * want to deploy the stack to. */
-  // env: { account: '123456789012', region: 'us-east-1' },
-
-  /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
+// Create the ECS stack first
+const ecsStack = new BottleTutorialEcsStack(app, 'BottleTutorialEcsStack', {
+  env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEFAULT_REGION },
+  repositoryName,
+  imageName
 });
+
+// Create the App Runner stack with a dependency on the ECS stack
+const appRunnerStack = new BottleTutorialAppRunnerStack(app, 'BottleTutorialAppRunnerStack', {
+  imageName,
+  repositoryName,
+  serviceName,
+  env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEFAULT_REGION },
+});
+
+// Add explicit dependency - App Runner stack will only deploy after ECS stack
+appRunnerStack.addDependency(ecsStack);
